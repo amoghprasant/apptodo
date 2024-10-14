@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sqliteproj/screen/contactsScreen.dart';
 import 'package:sqliteproj/screen/todolistScreen.dart';
 
 void main() {
@@ -14,7 +15,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: TodoListScreen(),
+      home: ContactsHomePage(),
     );
   }
 }
