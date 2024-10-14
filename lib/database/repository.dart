@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:sqliteproj/model/todo_model.dart';
+import 'package:fuzzywuzzy/fuzzywuzzy.dart'; // Add this import for fuzzy search
 
 // Abstract Repository Interface
 abstract class Repository<T extends BaseEntity, K> {
@@ -90,11 +91,21 @@ class TodoEntityRepository extends EntityRepository<Todo> {
 
   /// Method for searching Todos by keyword (name or description)
   Future<List<Todo>> quickSearch(String keyword) async {
-    final List<Map<String, dynamic>> records = await database.query(
-      tableName,
-      where: 'name LIKE ? OR description LIKE ?',
-      whereArgs: ['%$keyword%', '%$keyword%'],
-    );
-    return records.map((record) => fromMap(record)).toList();
+    final query = "name LIKE ? OR description LIKE ?";
+    final List<Map<String, dynamic>> records = await database
+        .query(tableName, where: query, whereArgs: ['$keyword%', '%$keyword%']);
+    final List<Todo> todos = records.map((record) => fromMap(record)).toList();
+    List<Todo> filteredTodos = todos;
+
+    // // Filter based on fuzzy matching
+    // final filteredTodos = todos.where((todo) {
+    //   final nameScore = ratio(todo.name.toLowerCase(), keyword.toLowerCase());
+    //   final descriptionScore =
+    //       ratio(todo.description.toLowerCase(), keyword.toLowerCase());
+    //   // Consider as a match if either score is above a certain threshold (e.g., 70)
+    //   return nameScore > 70 || descriptionScore > 70;
+    // }).toList();
+
+    return filteredTodos;
   }
 }
