@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:sqliteproj/model/contacts_model.dart'; // Ensure you import the Contact model
 
 class ContactProfilePage extends StatelessWidget {
-  final Map<String, String> contact;
+  final Contact contact; // Change to accept a Contact object
 
   ContactProfilePage({required this.contact});
 
@@ -9,7 +10,7 @@ class ContactProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(contact['name'] ?? 'Contact Profile'),
+        title: Text(contact.name), // Use contact.name directly
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -17,27 +18,27 @@ class ContactProfilePage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Name: ${contact['name'] ?? 'N/A'}',
+              'Name: ${contact.name}',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
             Text(
-              'Nickname: ${contact['nickname'] ?? 'N/A'}',
+              'Nickname: ${contact.nickname}',
               style: TextStyle(fontSize: 18),
             ),
             SizedBox(height: 10),
             Text(
-              'Phone Number 1: ${contact['phone1'] ?? 'N/A'}',
+              'Phone Number 1: ${contact.phone1 ?? 'N/A'}', // Assuming phone1 can be null
               style: TextStyle(fontSize: 18),
             ),
             SizedBox(height: 10),
             Text(
-              'Phone Number 2: ${contact['phone2'] ?? 'N/A'}',
+              'Phone Number 2: ${contact.phone2 ?? 'N/A'}',
               style: TextStyle(fontSize: 18),
             ),
             SizedBox(height: 10),
             Text(
-              'Organization: ${contact['organization'] ?? 'N/A'}',
+              'Organization: ${contact.organization ?? 'N/A'}',
               style: TextStyle(fontSize: 18),
             ),
           ],

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sqliteproj/model/contacts_model.dart';
+import 'package:sqliteproj/screen/contactProfilepage.dart';
 import 'package:sqliteproj/screen/createcontact.dart';
+// Import the new contact profile page
 import 'package:sqliteproj/database/repository.dart'; // Import repository
 
 class ContactsHomePage extends StatefulWidget {
@@ -14,7 +16,7 @@ class ContactsHomePage extends StatefulWidget {
 
 class _ContactsHomePageState extends State<ContactsHomePage> {
   List<Contact> _contacts = []; // List to hold contact details
-  List<Contact> _filteredContacts = [];
+  List<Contact> _filteredContacts = []; // List to hold filtered contact details
   TextEditingController _searchController = TextEditingController();
 
   @override
@@ -33,10 +35,21 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
 
   void _filterContacts() {
     String searchText = _searchController.text.toLowerCase();
+
     setState(() {
-      _filteredContacts = _contacts
-          .where((contact) => contact.name.toLowerCase().contains(searchText))
-          .toList();
+      // Filter contacts based on the search text
+      if (searchText.isEmpty) {
+        _filteredContacts =
+            List.from(_contacts); // Show all contacts if search is empty
+      } else {
+        _filteredContacts = _contacts
+            .where((contact) =>
+                contact.name.toLowerCase().contains(searchText) ||
+                contact.nickname
+                    .toLowerCase()
+                    .contains(searchText)) // Include nickname in search
+            .toList();
+      }
     });
   }
 
@@ -45,7 +58,7 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
     List<Contact> contacts = await widget.contactRepository.getAll();
     setState(() {
       _contacts = contacts;
-      _filteredContacts = _contacts;
+      _filteredContacts = List.from(_contacts); // Initialize filtered contacts
     });
   }
 
@@ -56,7 +69,7 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
 
     setState(() {
       _contacts.add(newContact);
-      _filteredContacts = _contacts;
+      _filteredContacts = List.from(_contacts); // Update filtered contacts
     });
   }
 
@@ -90,7 +103,16 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
                         .nickname[0]), // Display first letter of nickname
                   ),
                   onTap: () {
-                    // Handle contact tap (e.g., navigate to a contact detail page)
+                    // Navigate to the ContactProfilePage with the selected contact
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ContactProfilePage(
+                          contact: _filteredContacts[
+                              index], // Pass the selected contact
+                        ),
+                      ),
+                    );
                   },
                 );
               },
