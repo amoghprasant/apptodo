@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:sqliteproj/screen/contactProfilepage.dart';
 import 'package:sqliteproj/screen/createcontact.dart';
-// Import the CreateContactPage
+// Import the ContactProfilePage
 
 class ContactsHomePage extends StatefulWidget {
   @override
@@ -74,7 +75,15 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
                         ['nickname']![0]), // Display first letter of nickname
                   ),
                   onTap: () {
-                    // Handle contact tap (e.g., navigate to a contact detail page)
+                    // Navigate to ContactProfilePage with selected contact details
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ContactProfilePage(
+                          contact: _filteredContacts[index],
+                        ),
+                      ),
+                    );
                   },
                 );
               },
