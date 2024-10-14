@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
-import 'package:sqliteproj/model/todo_model.dart';
-import 'package:fuzzywuzzy/fuzzywuzzy.dart'; // Add this import for fuzzy search
+
+import 'package:sqliteproj/model/contacts_model.dart';
+import 'package:sqliteproj/model/todo_model.dart'; // Add this import for fuzzy search
 
 // Abstract Repository Interface
 abstract class Repository<T extends BaseEntity, K> {
@@ -107,5 +108,43 @@ class TodoEntityRepository extends EntityRepository<Todo> {
     // }).toList();
 
     return filteredTodos;
+  }
+}
+
+// Contact Entity Repository Implementation
+class ContactEntityRepository extends EntityRepository<Contact> {
+  ContactEntityRepository({required super.database});
+
+  @override
+  Contact fromMap(Map<String, dynamic> map) => Contact.fromMap(map);
+
+  @override
+  String get tableName => 'contact';
+
+  @override
+  Map<String, dynamic> toMap(Contact entity) => entity.toMap();
+
+  /// Method for searching Contacts by keyword (name, nickname, or organization)
+  Future<List<Contact>> quickSearch(String keyword) async {
+    final query = "name LIKE ? OR nickname LIKE ? OR organization LIKE ?";
+    final List<Map<String, dynamic>> records = await database.query(
+      tableName,
+      where: query,
+      whereArgs: ['$keyword%', '$keyword%', '$keyword%'],
+    );
+    final List<Contact> contacts =
+        records.map((record) => fromMap(record)).toList();
+    List<Contact> filteredContacts = contacts;
+
+    // // Filter based on fuzzy matching
+    // final filteredContacts = contacts.where((contact) {
+    //   final nameScore = ratio(contact.name.toLowerCase(), keyword.toLowerCase());
+    //   final nicknameScore = ratio(contact.nickname.toLowerCase(), keyword.toLowerCase());
+    //   final organizationScore = ratio(contact.organization.toLowerCase(), keyword.toLowerCase());
+    //   // Consider as a match if any score is above a certain threshold (e.g., 70)
+    //   return nameScore > 70 || nicknameScore > 70 || organizationScore > 70;
+    // }).toList();
+
+    return filteredContacts;
   }
 }

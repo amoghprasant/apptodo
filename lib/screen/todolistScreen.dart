@@ -25,7 +25,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
   }
 
   Future<void> _initializeDatabase() async {
-    final db = await DBHelper.dbHero.dataBase;
+    final db = await DBHelper.dbHelper.database;
     _todoRepository = TodoEntityRepository(database: db);
     _loadTodos();
   }
