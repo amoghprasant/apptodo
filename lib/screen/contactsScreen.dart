@@ -69,7 +69,6 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
               itemBuilder: (context, index) {
                 return ListTile(
                   title: Text(_filteredContacts[index]['name']!),
-                  subtitle: Text(_filteredContacts[index]['phone']!),
                   leading: CircleAvatar(
                     child: Text(_filteredContacts[index]
                         ['nickname']![0]), // Display first letter of nickname
