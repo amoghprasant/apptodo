@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sqliteproj/database/db_helper.dart'; // Fixed path typo
+import 'package:sqliteproj/database/db_helper.dart';
 import 'package:sqliteproj/database/repository.dart';
 import 'package:sqliteproj/model/todo_model.dart';
 
@@ -16,6 +16,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
 
   List<Todo> _todos = [];
   List<Todo> _filteredTodos = [];
+  String? _descriptionError; // Error message for description validation
 
   @override
   void initState() {
@@ -54,32 +55,69 @@ class _TodoListScreenState extends State<TodoListScreen> {
   void _addTodo() async {
     final name = _nameController.text;
     final description = _descriptionController.text;
+
+    setState(() {
+      _descriptionError =
+          description.isEmpty ? 'Please enter a description.' : null;
+    });
+
     if (name.isNotEmpty && description.isNotEmpty) {
       final todo = Todo(name: name, description: description);
       await _todoRepository.create(todo);
       _nameController.clear();
       _descriptionController.clear();
+      _descriptionError = null; // Clear error when successfully added
       _loadTodos();
-    } else {
-      // Show warning dialog if description is empty
-      _showWarningDialog();
+      Navigator.of(context).pop(); // Close the dialog after successfully adding
     }
   }
 
-  void _showWarningDialog() {
+  void _showAddTodoDialog() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Warning'),
-        content: Text('Please enter a description to save the Todo.'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: Text('OK'),
+      builder: (_) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Add Todo'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(labelText: 'Todo Name'),
+              ),
+              TextField(
+                controller: _descriptionController,
+                decoration: InputDecoration(
+                  labelText: 'Description',
+                  errorText:
+                      _descriptionError, // Display error message if present
+                ),
+                onChanged: (value) {
+                  // Update error message state when user types
+                  setState(() {
+                    _descriptionError =
+                        value.isEmpty ? 'Please enter a description.' : null;
+                  });
+                },
+              ),
+            ],
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel', style: TextStyle(color: Colors.black)),
+            ),
+            TextButton(
+              onPressed: () {
+                _addTodo(); // Attempt to add the Todo
+                setState(() {}); // Update the dialog state
+              },
+              child: Text('Add', style: TextStyle(color: Colors.black)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -110,14 +148,14 @@ class _TodoListScreenState extends State<TodoListScreen> {
           decoration: InputDecoration(
             hintText: 'Search Todos...',
             border: InputBorder.none,
-            hintStyle: TextStyle(color: Colors.black54), // Hint text color
+            hintStyle: TextStyle(color: Colors.black54),
           ),
-          onChanged: _searchTodos, // Trigger search on text change
-          style: TextStyle(color: Colors.black), // Input text color
+          onChanged: _searchTodos,
+          style: TextStyle(color: Colors.black),
         ),
-        backgroundColor: Colors.white, // AppBar background color
+        backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: IconThemeData(color: Colors.black), // Icon color
+        iconTheme: IconThemeData(color: Colors.black),
       ),
       body: Container(
         color: Colors.white,
@@ -140,9 +178,8 @@ class _TodoListScreenState extends State<TodoListScreen> {
                 itemBuilder: (context, index) {
                   final todo = _filteredTodos[index];
                   return Dismissible(
-                    key: Key(todo.id.toString()), // Unique key for each todo
-                    direction:
-                        DismissDirection.endToStart, // Swipe right to left
+                    key: Key(todo.id.toString()),
+                    direction: DismissDirection.endToStart,
                     background: Container(
                       alignment: Alignment.centerRight,
                       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -150,7 +187,6 @@ class _TodoListScreenState extends State<TodoListScreen> {
                       child: Icon(Icons.delete, color: Colors.white),
                     ),
                     confirmDismiss: (direction) async {
-                      // Show delete confirmation dialog
                       return await showDialog(
                         context: context,
                         builder: (_) => AlertDialog(
@@ -162,30 +198,21 @@ class _TodoListScreenState extends State<TodoListScreen> {
                               onPressed: () {
                                 Navigator.of(context).pop(false);
                               },
-                              child: Text(
-                                'Cancel',
-                                style: TextStyle(
-                                    color: Colors
-                                        .black), // Set text color to black
-                              ),
+                              child: Text('Cancel',
+                                  style: TextStyle(color: Colors.black)),
                             ),
                             TextButton(
                               onPressed: () {
                                 Navigator.of(context).pop(true);
                               },
-                              child: Text(
-                                'Delete',
-                                style: TextStyle(
-                                    color: Colors
-                                        .black), // Set text color to black
-                              ),
+                              child: Text('Delete',
+                                  style: TextStyle(color: Colors.black)),
                             ),
                           ],
                         ),
                       );
                     },
                     onDismissed: (direction) {
-                      // Delete the todo if confirmed
                       _deleteTodo(todo.id!);
                     },
                     child: ListTile(
@@ -230,24 +257,16 @@ class _TodoListScreenState extends State<TodoListScreen> {
                                   onPressed: () {
                                     Navigator.of(context).pop();
                                   },
-                                  child: Text(
-                                    'Cancel',
-                                    style: TextStyle(
-                                        color: Colors
-                                            .black), // Set text color to black
-                                  ),
+                                  child: Text('Cancel',
+                                      style: TextStyle(color: Colors.black)),
                                 ),
                                 TextButton(
                                   onPressed: () {
                                     _updateTodo(todo);
                                     Navigator.of(context).pop();
                                   },
-                                  child: Text(
-                                    'Update',
-                                    style: TextStyle(
-                                        color: Colors
-                                            .black), // Set text color to black
-                                  ),
+                                  child: Text('Update',
+                                      style: TextStyle(color: Colors.black)),
                                 ),
                               ],
                             ),
@@ -263,55 +282,9 @@ class _TodoListScreenState extends State<TodoListScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _nameController.clear();
-          _descriptionController.clear();
-          showDialog(
-            context: context,
-            builder: (_) => AlertDialog(
-              title: Text('Add Todo'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _nameController,
-                    decoration: InputDecoration(labelText: 'Todo Name'),
-                  ),
-                  TextField(
-                    controller: _descriptionController,
-                    decoration: InputDecoration(labelText: 'Description'),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Text(
-                    'Cancel',
-                    style: TextStyle(
-                        color: Colors.black), // Set text color to black
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    _addTodo(); // This will check if the description is empty
-                    Navigator.of(context).pop();
-                  },
-                  child: Text(
-                    'Add',
-                    style: TextStyle(
-                        color: Colors.black), // Set text color to black
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-        child: Icon(Icons.add, color: Colors.black), // Set icon color to black
-        backgroundColor: const Color.fromARGB(
-            154, 217, 214, 214), // Background color for the button
+        onPressed: _showAddTodoDialog,
+        child: Icon(Icons.add, color: Colors.black),
+        backgroundColor: const Color.fromARGB(154, 217, 214, 214),
       ),
     );
   }
