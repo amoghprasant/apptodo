@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sqliteproj/model/contacts_model.dart';
 import 'package:sqliteproj/screen/contactProfilepage.dart';
 import 'package:sqliteproj/screen/createcontact.dart';
-// Import the new contact profile page
-import 'package:sqliteproj/database/repository.dart'; // Import repository
+import 'package:sqliteproj/database/repository.dart';
 
 class ContactsHomePage extends StatefulWidget {
   final ContactEntityRepository contactRepository;
@@ -42,13 +41,13 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
         _filteredContacts =
             List.from(_contacts); // Show all contacts if search is empty
       } else {
-        _filteredContacts = _contacts
-            .where((contact) =>
-                contact.name.toLowerCase().contains(searchText) ||
-                contact.nickname
-                    .toLowerCase()
-                    .contains(searchText)) // Include nickname in search
-            .toList();
+        _filteredContacts = _contacts.where((contact) {
+          // Check if the search text matches the name, nickname, phone1, or phone2
+          return contact.name.toLowerCase().contains(searchText) ||
+              contact.nickname.toLowerCase().contains(searchText) ||
+              contact.phone1.toLowerCase().contains(searchText) ||
+              contact.phone2.toLowerCase().contains(searchText);
+        }).toList();
       }
     });
   }
@@ -78,6 +77,7 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Contacts'),
+        centerTitle: true,
       ),
       body: Column(
         children: [
@@ -87,46 +87,39 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
               controller: _searchController,
               decoration: InputDecoration(
                 labelText: 'Search Contacts',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
                 prefixIcon: Icon(Icons.search),
               ),
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              itemCount: _filteredContacts.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  title: Text(_filteredContacts[index].name),
-                  leading: CircleAvatar(
-                    child: Text(_filteredContacts[index]
-                        .nickname[0]), // Display first letter of nickname
+            child: _filteredContacts.isNotEmpty
+                ? ListView.builder(
+                    itemCount: _filteredContacts.length,
+                    itemBuilder: (context, index) {
+                      return _buildContactCard(_filteredContacts[index]);
+                    },
+                  )
+                : Center(
+                    child: Text(
+                      'No contacts found.',
+                      style: TextStyle(fontSize: 18, color: Colors.grey),
+                    ),
                   ),
-                  onTap: () {
-                    // Navigate to the ContactProfilePage with the selected contact
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ContactProfilePage(
-                          contact: _filteredContacts[
-                              index], // Pass the selected contact
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          // Navigate to the CreateContactPage
+          // Navigate to the CreateContactPage and pass the contactRepository
           final newContactMap = await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => CreateContactPage(),
+              builder: (context) => CreateContactPage(
+                contactRepository: widget.contactRepository,
+              ),
             ),
           );
 
@@ -137,6 +130,44 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
           }
         },
         child: Icon(Icons.add),
+      ),
+    );
+  }
+
+  // Helper method to build a styled card for each contact
+  Widget _buildContactCard(Contact contact) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      elevation: 4,
+      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.blueAccent,
+          child: Text(
+            contact.nickname.isNotEmpty
+                ? contact.nickname[0].toUpperCase()
+                : '?',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+        title: Text(
+          contact.name,
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(contact.phone1),
+        onTap: () {
+          // Navigate to the ContactProfilePage with the selected contact
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ContactProfilePage(
+                contact: contact,
+              ),
+            ),
+          );
+        },
       ),
     );
   }

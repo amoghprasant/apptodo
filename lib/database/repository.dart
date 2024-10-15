@@ -123,14 +123,28 @@ class ContactEntityRepository extends EntityRepository<Contact> {
 
   @override
   Map<String, dynamic> toMap(Contact entity) => entity.toMap();
+  Future<bool> isPhoneNumberExists(String phoneNumber) async {
+    final List<Map<String, dynamic>> records = await database.query(
+      tableName,
+      where: 'phone1 = ? OR phone2 = ?',
+      whereArgs: [phoneNumber, phoneNumber],
+    );
+    return records.isNotEmpty;
+  }
 
   /// Method for searching Contacts by keyword (name, nickname, or organization)
   Future<List<Contact>> quickSearch(String keyword) async {
-    final query = "name LIKE ? OR nickname LIKE ? OR organization LIKE ?";
+    final query =
+        "name LIKE ? OR nickname LIKE ? OR organization LIKE ?OR phone1 LIKE ? OR phone2 LIKE ?";
     final List<Map<String, dynamic>> records = await database.query(
       tableName,
       where: query,
-      whereArgs: ['$keyword%', '$keyword%', '$keyword%'],
+      whereArgs: [
+        '$keyword%',
+        '$keyword%',
+        '$keyword%' '$keyword%',
+        '$keyword%'
+      ],
     );
     final List<Contact> contacts =
         records.map((record) => fromMap(record)).toList();
