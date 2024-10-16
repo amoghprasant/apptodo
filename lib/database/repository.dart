@@ -1,7 +1,7 @@
+import 'dart:convert'; // Import for JSON encoding and decoding
 import 'package:sqflite/sqflite.dart';
-
 import 'package:sqliteproj/model/contacts_model.dart';
-import 'package:sqliteproj/model/todo_model.dart'; // Add this import for fuzzy search
+import 'package:sqliteproj/model/todo_model.dart';
 
 // Abstract Repository Interface
 abstract class Repository<T extends BaseEntity, K> {
@@ -77,6 +77,67 @@ abstract class EntityRepository<K extends BaseEntity>
   }
 }
 
+// Contact Entity Repository Implementation
+class ContactEntityRepository extends EntityRepository<Contact> {
+  ContactEntityRepository({required super.database});
+
+  @override
+  Contact fromMap(Map<String, dynamic> map) {
+    // Parse the dynamic fields from the 'additionalInfo' column
+    Map<String, String> additionalInfo = {};
+    if (map['additionalInfo'] != null) {
+      final decodedInfo = jsonDecode(map['additionalInfo']);
+      if (decodedInfo is Map<String, dynamic>) {
+        additionalInfo =
+            decodedInfo.map((key, value) => MapEntry(key, value.toString()));
+      }
+    }
+
+    return Contact.fromMap(map)..additionalInfo = additionalInfo;
+  }
+
+  @override
+  String get tableName => 'contact';
+
+  @override
+  Map<String, dynamic> toMap(Contact entity) {
+    // Convert the dynamic fields to a JSON string
+    final additionalInfoJson = jsonEncode(entity.additionalInfo);
+
+    final baseMap = entity.toMap();
+    baseMap['additionalInfo'] = additionalInfoJson;
+    return baseMap;
+  }
+
+  Future<bool> isPhoneNumberExists(String phoneNumber) async {
+    final List<Map<String, dynamic>> records = await database.query(
+      tableName,
+      where: 'phone1 = ? OR phone2 = ?',
+      whereArgs: [phoneNumber, phoneNumber],
+    );
+    return records.isNotEmpty;
+  }
+
+  /// Method for searching Contacts by keyword (name, nickname, organization, or custom fields)
+  Future<List<Contact>> quickSearch(String keyword) async {
+    final queryFields =
+        _serachableFields.map((field) => '$field LIKE ?').toList();
+    final whereArgs = List.filled(_serachableFields.length, '$keyword%');
+    final query = queryFields.join(' OR ');
+
+    // final query =
+    //     "name LIKE ? OR nickname LIKE ? OR organization LIKE ? OR phone1 LIKE ? OR phone2 LIKE ? OR additionalInfo LIKE ?";
+    final List<Map<String, dynamic>> records =
+        await database.query(tableName, where: query, whereArgs: whereArgs);
+
+    final List<Contact> contacts =
+        records.map((record) => fromMap(record)).toList();
+    return contacts;
+  }
+
+  final Set<String> _serachableFields = {'name', 'phone1', 'phone2'};
+}
+
 // Todo Entity Repository Implementation
 class TodoEntityRepository extends EntityRepository<Todo> {
   TodoEntityRepository({required super.database});
@@ -96,69 +157,6 @@ class TodoEntityRepository extends EntityRepository<Todo> {
     final List<Map<String, dynamic>> records = await database
         .query(tableName, where: query, whereArgs: ['$keyword%', '%$keyword%']);
     final List<Todo> todos = records.map((record) => fromMap(record)).toList();
-    List<Todo> filteredTodos = todos;
-
-    // // Filter based on fuzzy matching
-    // final filteredTodos = todos.where((todo) {
-    //   final nameScore = ratio(todo.name.toLowerCase(), keyword.toLowerCase());
-    //   final descriptionScore =
-    //       ratio(todo.description.toLowerCase(), keyword.toLowerCase());
-    //   // Consider as a match if either score is above a certain threshold (e.g., 70)
-    //   return nameScore > 70 || descriptionScore > 70;
-    // }).toList();
-
-    return filteredTodos;
-  }
-}
-
-// Contact Entity Repository Implementation
-class ContactEntityRepository extends EntityRepository<Contact> {
-  ContactEntityRepository({required super.database});
-
-  @override
-  Contact fromMap(Map<String, dynamic> map) => Contact.fromMap(map);
-
-  @override
-  String get tableName => 'contact';
-
-  @override
-  Map<String, dynamic> toMap(Contact entity) => entity.toMap();
-  Future<bool> isPhoneNumberExists(String phoneNumber) async {
-    final List<Map<String, dynamic>> records = await database.query(
-      tableName,
-      where: 'phone1 = ? OR phone2 = ?',
-      whereArgs: [phoneNumber, phoneNumber],
-    );
-    return records.isNotEmpty;
-  }
-
-  /// Method for searching Contacts by keyword (name, nickname, or organization)
-  Future<List<Contact>> quickSearch(String keyword) async {
-    final query =
-        "name LIKE ? OR nickname LIKE ? OR organization LIKE ?OR phone1 LIKE ? OR phone2 LIKE ?";
-    final List<Map<String, dynamic>> records = await database.query(
-      tableName,
-      where: query,
-      whereArgs: [
-        '$keyword%',
-        '$keyword%',
-        '$keyword%' '$keyword%',
-        '$keyword%'
-      ],
-    );
-    final List<Contact> contacts =
-        records.map((record) => fromMap(record)).toList();
-    List<Contact> filteredContacts = contacts;
-
-    // // Filter based on fuzzy matching
-    // final filteredContacts = contacts.where((contact) {
-    //   final nameScore = ratio(contact.name.toLowerCase(), keyword.toLowerCase());
-    //   final nicknameScore = ratio(contact.nickname.toLowerCase(), keyword.toLowerCase());
-    //   final organizationScore = ratio(contact.organization.toLowerCase(), keyword.toLowerCase());
-    //   // Consider as a match if any score is above a certain threshold (e.g., 70)
-    //   return nameScore > 70 || nicknameScore > 70 || organizationScore > 70;
-    // }).toList();
-
-    return filteredContacts;
+    return todos;
   }
 }

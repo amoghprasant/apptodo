@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:sqliteproj/model/contacts_model.dart'; // Ensure you import the Contact model
+import 'package:sqliteproj/model/contacts_model.dart';
 
 class ContactProfilePage extends StatelessWidget {
-  final Contact contact; // Change to accept a Contact object
+  final Contact contact;
 
   ContactProfilePage({required this.contact});
 
@@ -10,7 +10,7 @@ class ContactProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(contact.name), // Use contact.name directly
+        title: Text(contact.name),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -49,51 +49,31 @@ class ContactProfilePage extends StatelessWidget {
                   ? contact.organization
                   : 'N/A',
             ),
+            SizedBox(height: 20),
+            Text(
+              'Additional Information',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            ...contact.additionalInfo?.entries.map((entry) {
+                  return ListTile(
+                    title: Text(entry.key),
+                    subtitle: Text(entry.value),
+                  );
+                }).toList() ??
+                [],
           ],
         ),
       ),
     );
   }
 
-  // Helper method to build a styled card for displaying contact information
-  Widget _buildContactInfoCard({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
+  Widget _buildContactInfoCard(
+      {required IconData icon, required String label, required String value}) {
     return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.0),
-      ),
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Icon(icon, size: 30, color: Colors.blueAccent),
-            SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[700],
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(label),
+        subtitle: Text(value),
       ),
     );
   }

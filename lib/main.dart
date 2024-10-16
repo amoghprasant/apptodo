@@ -8,20 +8,40 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Open the database
-  final database = await openDatabase(
-    join(await getDatabasesPath(), 'contacts.db'),
-    onCreate: (db, version) {
-      // Create the contacts table
-      return db.execute(
-        'CREATE TABLE contact(id INTEGER PRIMARY KEY, name TEXT, nickname TEXT, phone1 TEXT, phone2 TEXT, organization TEXT)',
-      );
-    },
-    version: 1,
-  );
-
+  final Database database = await initializeDatabase();
   final contactRepository = ContactEntityRepository(database: database);
 
   runApp(MyApp(contactRepository: contactRepository));
+}
+
+// Function to initialize the database
+Future<Database> initializeDatabase() async {
+  String path = join(await getDatabasesPath(), 'your_database_name.db');
+
+  return await openDatabase(
+    path,
+    version: 2, // Increment the version number
+    onCreate: (db, version) {
+      return db.execute(
+        '''
+        CREATE TABLE contact(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT,
+          phone1 TEXT,
+          phone2 TEXT,
+          nickname TEXT,
+          organization TEXT,
+          additionalInfo TEXT
+        )
+        ''',
+      );
+    },
+    onUpgrade: (db, oldVersion, newVersion) async {
+      if (oldVersion < 2) {
+        await db.execute('ALTER TABLE contact ADD COLUMN additionalInfo TEXT');
+      }
+    },
+  );
 }
 
 class MyApp extends StatelessWidget {
