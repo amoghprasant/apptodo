@@ -118,22 +118,49 @@ class ContactEntityRepository extends EntityRepository<Contact> {
     return records.isNotEmpty;
   }
 
-  /// Method for searching Contacts by keyword (name, nickname, organization, or custom fields)
-  Future<List<Contact>> quickSearch(String keyword) async {
+  /// Method for searching Contacts by keyword (name, phone, or additionalInfo)
+  Future<List<Contact>> quickSearchWithFallback(String keyword) async {
+    // Search in specified fields first
     final queryFields =
-        _serachableFields.map((field) => '$field LIKE ?').toList();
-    final whereArgs = List.filled(_serachableFields.length, '$keyword%');
+        _searchableFields.map((field) => '$field LIKE ?').toList();
+    final whereArgs = List.filled(_searchableFields.length, '%$keyword%');
     final query = queryFields.join(' OR ');
 
-    final List<Map<String, dynamic>> records =
-        await database.query(tableName, where: query, whereArgs: whereArgs);
+    // Perform the initial query to get matching records from specified fields
+    final List<Map<String, dynamic>> records = await database.query(
+      tableName,
+      where: query,
+      whereArgs: whereArgs,
+    );
 
-    final List<Contact> contacts =
-        records.map((record) => fromMap(record)).toList();
+    // Convert the initial query results into a list of Contacts
+    List<Contact> contacts = records.map((record) => fromMap(record)).toList();
+
+    // If no results are found, search in additionalInfo
+    if (contacts.isEmpty) {
+      final List<Map<String, dynamic>> allRecords =
+          await database.query(tableName);
+      contacts = allRecords
+          .map((record) {
+            final contact = fromMap(record);
+
+            // Check if the keyword exists in the additionalInfo map values
+            final additionalInfo = contact.additionalInfo;
+            final isKeywordInAdditionalInfo = additionalInfo.values.any(
+              (value) => value.toLowerCase().contains(keyword.toLowerCase()),
+            );
+
+            // Return the contact if the keyword is found in additionalInfo
+            return isKeywordInAdditionalInfo ? contact : null;
+          })
+          .whereType<Contact>()
+          .toList(); // Filter out nulls
+    }
+
     return contacts;
   }
 
-  final Set<String> _serachableFields = {'name', 'phone1', 'phone2'};
+  final Set<String> _searchableFields = {'name', 'phone1', 'phone2'};
 }
 
 // Todo Entity Repository Implementation

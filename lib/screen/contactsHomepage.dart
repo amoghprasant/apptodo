@@ -17,6 +17,7 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
   List<Contact> _contacts = [];
   List<Contact> _filteredContacts = [];
   TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false; // State variable to track search mode
 
   @override
   void initState() {
@@ -50,6 +51,8 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
 
   Future<void> _loadContacts() async {
     List<Contact> contacts = await widget.contactRepository.getAll();
+    contacts
+        .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     setState(() {
       _contacts = contacts;
       _filteredContacts = List.from(_contacts);
@@ -69,28 +72,50 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
     await _loadContacts(); // Reload contacts to refresh the list
   }
 
+  void _startSearch() {
+    setState(() {
+      _isSearching = true; // Enable search mode
+    });
+  }
+
+  void _cancelSearch() {
+    setState(() {
+      _isSearching = false; // Disable search mode
+      _searchController.clear(); // Clear the search text
+      _filteredContacts = List.from(_contacts); // Show all contacts again
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Contacts'),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Search Contacts',
+                  border: InputBorder.none,
+                ),
+                style: TextStyle(color: Colors.black),
+              )
+            : Text('Contacts'),
         centerTitle: true,
+        actions: [
+          _isSearching
+              ? IconButton(
+                  icon: Icon(Icons.cancel),
+                  onPressed: _cancelSearch, // Cancel search
+                )
+              : IconButton(
+                  icon: Icon(Icons.search),
+                  onPressed: _startSearch, // Start search
+                ),
+        ],
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                labelText: 'Search Contacts',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-                prefixIcon: Icon(Icons.search),
-              ),
-            ),
-          ),
           Expanded(
             child: _filteredContacts.isNotEmpty
                 ? ListView.builder(
