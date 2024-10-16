@@ -1,106 +1,97 @@
 import 'package:flutter/material.dart';
-import 'package:sqliteproj/database/repository.dart';
 import 'package:sqliteproj/model/contacts_model.dart';
+import 'package:sqliteproj/database/repository.dart';
 
 class EditContactPage extends StatefulWidget {
   final Contact contact;
-  final ContactEntityRepository repository;
+  final ContactEntityRepository contactRepository;
 
-  EditContactPage({required this.contact, required this.repository});
+  EditContactPage({required this.contact, required this.contactRepository});
 
   @override
   _EditContactPageState createState() => _EditContactPageState();
 }
 
 class _EditContactPageState extends State<EditContactPage> {
-  final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nameController;
-  late TextEditingController _nicknameController;
-  late TextEditingController _phone1Controller;
-  late TextEditingController _phone2Controller;
-  late TextEditingController _organizationController;
+  late TextEditingController nameController;
+  late TextEditingController phone1Controller;
+  late TextEditingController phone2Controller;
+  late TextEditingController nicknameController;
+  late TextEditingController organizationController;
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.contact.name);
-    _nicknameController = TextEditingController(text: widget.contact.nickname);
-    _phone1Controller = TextEditingController(text: widget.contact.phone1);
-    _phone2Controller = TextEditingController(text: widget.contact.phone2);
-    _organizationController =
+    nameController = TextEditingController(text: widget.contact.name);
+    phone1Controller = TextEditingController(text: widget.contact.phone1);
+    phone2Controller = TextEditingController(text: widget.contact.phone2);
+    nicknameController = TextEditingController(text: widget.contact.nickname);
+    organizationController =
         TextEditingController(text: widget.contact.organization);
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _nicknameController.dispose();
-    _phone1Controller.dispose();
-    _phone2Controller.dispose();
-    _organizationController.dispose();
+    nameController.dispose();
+    phone1Controller.dispose();
+    phone2Controller.dispose();
+    nicknameController.dispose();
+    organizationController.dispose();
     super.dispose();
+  }
+
+  void _saveContact() async {
+    final updatedContact = Contact(
+      id: widget.contact.id,
+      name: nameController.text,
+      phone1: phone1Controller.text,
+      phone2: phone2Controller.text,
+      nickname: nicknameController.text,
+      organization: organizationController.text,
+      additionalInfo: widget.contact.additionalInfo,
+    );
+
+    await widget.contactRepository.update(updatedContact);
+    Navigator.pop(context, updatedContact);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Edit Contact")),
+      appBar: AppBar(
+        title: Text('Edit Contact'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.save),
+            onPressed: _saveContact,
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(labelText: "Name"),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return "Please enter the contact name";
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _nicknameController,
-                decoration: InputDecoration(labelText: "Nickname"),
-              ),
-              TextFormField(
-                controller: _phone1Controller,
-                decoration: InputDecoration(labelText: "Phone Number 1"),
-              ),
-              TextFormField(
-                controller: _phone2Controller,
-                decoration: InputDecoration(labelText: "Phone Number 2"),
-              ),
-              TextFormField(
-                controller: _organizationController,
-                decoration: InputDecoration(labelText: "Organization"),
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () async {
-                  if (_formKey.currentState!.validate()) {
-                    Contact updatedContact = Contact(
-                      id: widget.contact.id,
-                      name: _nameController.text,
-                      nickname: _nicknameController.text,
-                      phone1: _phone1Controller.text,
-                      phone2: _phone2Controller.text,
-                      organization: _organizationController.text,
-                    );
-
-                    // Update contact in the database
-                    await widget.repository.update(updatedContact);
-
-                    // Return the updated contact to the previous screen
-                    Navigator.pop(context, updatedContact);
-                  }
-                },
-                child: Text("Save Changes"),
-              ),
-            ],
-          ),
+        child: Column(
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(labelText: 'Name'),
+            ),
+            TextField(
+              controller: phone1Controller,
+              decoration: InputDecoration(labelText: 'Phone Number 1'),
+            ),
+            TextField(
+              controller: phone2Controller,
+              decoration: InputDecoration(labelText: 'Phone Number 2'),
+            ),
+            TextField(
+              controller: nicknameController,
+              decoration: InputDecoration(labelText: 'Nickname'),
+            ),
+            TextField(
+              controller: organizationController,
+              decoration: InputDecoration(labelText: 'Organization'),
+            ),
+          ],
         ),
       ),
     );

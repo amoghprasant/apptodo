@@ -125,8 +125,6 @@ class ContactEntityRepository extends EntityRepository<Contact> {
     final whereArgs = List.filled(_serachableFields.length, '$keyword%');
     final query = queryFields.join(' OR ');
 
-    // final query =
-    //     "name LIKE ? OR nickname LIKE ? OR organization LIKE ? OR phone1 LIKE ? OR phone2 LIKE ? OR additionalInfo LIKE ?";
     final List<Map<String, dynamic>> records =
         await database.query(tableName, where: query, whereArgs: whereArgs);
 

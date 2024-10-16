@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sqliteproj/model/contacts_model.dart';
-
 import 'package:sqliteproj/screen/contactProfilepage.dart';
 import 'package:sqliteproj/screen/createcontact.dart';
 import 'package:sqliteproj/database/repository.dart';
@@ -15,14 +14,14 @@ class ContactsHomePage extends StatefulWidget {
 }
 
 class _ContactsHomePageState extends State<ContactsHomePage> {
-  List<Contact> _contacts = []; // List to hold contact details
-  List<Contact> _filteredContacts = []; // List to hold filtered contact details
+  List<Contact> _contacts = [];
+  List<Contact> _filteredContacts = [];
   TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadContacts(); // Load contacts from the database
+    _loadContacts();
     _searchController.addListener(_filterContacts);
   }
 
@@ -35,15 +34,11 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
 
   void _filterContacts() {
     String searchText = _searchController.text.toLowerCase();
-
     setState(() {
-      // Filter contacts based on the search text
       if (searchText.isEmpty) {
-        _filteredContacts =
-            List.from(_contacts); // Show all contacts if search is empty
+        _filteredContacts = List.from(_contacts);
       } else {
         _filteredContacts = _contacts.where((contact) {
-          // Check if the search text matches the name, nickname, phone1, or phone2
           return contact.name.toLowerCase().contains(searchText) ||
               contact.nickname.toLowerCase().contains(searchText) ||
               contact.phone1.toLowerCase().contains(searchText) ||
@@ -54,23 +49,24 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
   }
 
   Future<void> _loadContacts() async {
-    // Fetch contacts from the database
     List<Contact> contacts = await widget.contactRepository.getAll();
     setState(() {
       _contacts = contacts;
-      _filteredContacts = List.from(_contacts); // Initialize filtered contacts
+      _filteredContacts = List.from(_contacts);
     });
   }
 
   Future<void> _addContact(Contact newContact) async {
-    // Save the new contact to the database
     int id = await widget.contactRepository.create(newContact);
-    newContact.id = id; // Update the contact's ID with the generated ID
-
+    newContact.id = id;
     setState(() {
       _contacts.add(newContact);
-      _filteredContacts = List.from(_contacts); // Update filtered contacts
+      _filteredContacts = List.from(_contacts);
     });
+  }
+
+  Future<void> _refreshContactList() async {
+    await _loadContacts(); // Reload contacts to refresh the list
   }
 
   @override
@@ -114,7 +110,6 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          // Navigate to the CreateContactPage and pass the contactRepository
           final newContactMap = await Navigator.push(
             context,
             MaterialPageRoute(
@@ -124,7 +119,6 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
             ),
           );
 
-          // Check if new contact is not null and add it to the list
           if (newContactMap != null) {
             Contact newContact = Contact.fromMap(newContactMap);
             await _addContact(newContact);
@@ -135,7 +129,6 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
     );
   }
 
-  // Helper method to build a styled card for each contact
   Widget _buildContactCard(Contact contact) {
     return Card(
       shape: RoundedRectangleBorder(
@@ -158,19 +151,32 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Text(contact.phone1),
-        onTap: () {
+        onTap: () async {
           // Navigate to the ContactProfilePage with the selected contact
-          Navigator.push(
+          final result = await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => ContactProfilePage(
                 contact: contact,
+                contactRepository: widget.contactRepository,
               ),
             ),
           );
+
+          if (result == true) {
+            await _refreshContactList(); // Refresh the contact list if deleted
+          } else if (result != null) {
+            // If the contact was edited, update the contact in the list
+            setState(() {
+              int index = _contacts.indexWhere((c) => c.id == result['id']);
+              if (index != -1) {
+                _contacts[index] = Contact.fromMap(result);
+                _filteredContacts = List.from(_contacts);
+              }
+            });
+          }
         },
       ),
     );
   }
 }
-//instead of map
