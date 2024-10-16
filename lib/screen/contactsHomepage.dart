@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sqliteproj/model/contacts_model.dart';
-
 import 'package:sqliteproj/screen/contactProfilepage.dart';
 import 'package:sqliteproj/screen/createcontact.dart';
 import 'package:sqliteproj/database/repository.dart';
@@ -43,7 +42,6 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
             List.from(_contacts); // Show all contacts if search is empty
       } else {
         _filteredContacts = _contacts.where((contact) {
-          // Check if the search text matches the name, nickname, phone1, or phone2
           return contact.name.toLowerCase().contains(searchText) ||
               contact.nickname.toLowerCase().contains(searchText) ||
               contact.phone1.toLowerCase().contains(searchText) ||
@@ -77,8 +75,9 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Contacts'),
+        title: Text(''),
         centerTitle: true,
+        backgroundColor: Colors.blueAccent, // Consistent app bar color
       ),
       body: Column(
         children: [
@@ -87,11 +86,15 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
+                filled: true,
+                fillColor:
+                    Colors.grey[200], // Light background for search field
                 labelText: 'Search Contacts',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.0),
+                  borderSide: BorderSide.none,
                 ),
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: Icon(Icons.search, color: Colors.blueAccent),
               ),
             ),
           ),
@@ -130,6 +133,7 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
             await _addContact(newContact);
           }
         },
+        backgroundColor: Colors.blueAccent, // Floating action button color
         child: Icon(Icons.add),
       ),
     );
@@ -141,7 +145,7 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.0),
       ),
-      elevation: 4,
+      elevation: 2,
       margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
       child: ListTile(
         leading: CircleAvatar(
@@ -155,9 +159,16 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
         ),
         title: Text(
           contact.name,
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.black87, // Darker text color for better readability
+          ),
         ),
-        subtitle: Text(contact.phone1),
+        subtitle: Text(
+          contact.phone1,
+          style: TextStyle(
+              color: Colors.black54), // Lighter text color for subtitled
+        ),
         onTap: () {
           // Navigate to the ContactProfilePage with the selected contact
           Navigator.push(
@@ -173,4 +184,3 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
     );
   }
 }
-//instead of map
