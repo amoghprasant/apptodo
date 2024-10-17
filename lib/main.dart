@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:sqliteproj/database/repository.dart';
+import 'package:sqliteproj/providers/theme.dart';
 import 'package:sqliteproj/screen/contactsHomepage.dart';
 
 void main() async {
@@ -11,7 +14,12 @@ void main() async {
   final Database database = await initializeDatabase();
   final contactRepository = ContactEntityRepository(database: database);
 
-  runApp(MyApp(contactRepository: contactRepository));
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => ThemeProvider()..initialize(),
+      child: MyApp(contactRepository: contactRepository),
+    ),
+  );
 }
 
 // Function to initialize the database
@@ -51,12 +59,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Todo App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      title: 'Contacts App',
+      theme: themeProvider.themeMode == ThemeMode.dark
+          ? themeProvider.darkTheme
+          : themeProvider.lightTheme,
       home: ContactsHomePage(
           contactRepository: contactRepository), // Pass the repository instance
     );
