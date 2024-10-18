@@ -94,6 +94,8 @@ class _CreateContactPageState extends State<CreateContactPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Create Contact'),
@@ -134,7 +136,7 @@ class _CreateContactPageState extends State<CreateContactPage> {
                 'Additional Information',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: isDarkMode ? Colors.white : Colors.black,
                     ),
               ),
               ..._additionalFields.map((field) {
@@ -158,22 +160,24 @@ class _CreateContactPageState extends State<CreateContactPage> {
               }).toList(),
               TextButton.icon(
                 onPressed: _addAdditionalField,
-                icon: Icon(Icons.add, color: Colors.blueAccent),
+                icon: Icon(Icons.add,
+                    color: const Color.fromARGB(255, 16, 16, 16)),
                 label: Text(
                   'Add More Fields',
-                  style: TextStyle(color: Colors.blueAccent),
+                  style: TextStyle(color: const Color.fromARGB(255, 1, 17, 45)),
                 ),
                 style: TextButton.styleFrom(
                     foregroundColor: const Color.fromARGB(255, 247, 248, 248),
-                    backgroundColor: Colors.blue
-                    // Text color
-                    ),
-                child: Text('Add More Fields'),
+                    backgroundColor: Colors.blue),
               ),
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _saveContact,
                 child: Text('Save Contact'),
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: isDarkMode ? Colors.white : Colors.black,
+                  backgroundColor: Colors.blue,
+                ),
               ),
             ],
           ),

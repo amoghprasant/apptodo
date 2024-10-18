@@ -62,7 +62,7 @@ class ContactProfilePage extends StatelessWidget {
             ),
             ...contact.additionalInfo.entries.map((entry) {
               return _buildContactInfoTile(
-                icon: Icons.info,
+                icon: _getIconForKey(entry.key),
                 label: entry.key,
                 value: entry.value,
                 context: context,
@@ -91,13 +91,6 @@ class ContactProfilePage extends StatelessWidget {
                   foregroundColor: Colors.white, backgroundColor: Colors.blue),
               child: Text('Edit Contact'),
             ),
-            ...contact.additionalInfo?.entries.map((entry) {
-                  return ListTile(
-                    title: Text(entry.key),
-                    subtitle: Text(entry.value),
-                  );
-                }).toList() ??
-                [],
           ],
         ),
       ),
@@ -122,17 +115,6 @@ class ContactProfilePage extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       contentPadding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
       visualDensity: VisualDensity.adaptivePlatformDensity,
-    );
-  }
-
-  Widget _buildContactInfoCard(
-      {required IconData icon, required String label, required String value}) {
-    return Card(
-      child: ListTile(
-        leading: Icon(icon),
-        title: Text(label),
-        subtitle: Text(value),
-      ),
     );
   }
 
