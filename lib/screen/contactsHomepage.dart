@@ -174,7 +174,7 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
             await _addContact(newContact);
           }
         },
-        backgroundColor: const Color.fromARGB(255, 3, 138, 249),
+        backgroundColor: Colors.blue,
         child: Icon(Icons.add),
       ),
     );

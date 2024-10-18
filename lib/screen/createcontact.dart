@@ -96,8 +96,7 @@ class _CreateContactPageState extends State<CreateContactPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-            widget.existingContact == null ? 'Create Contact' : 'Edit Contact'),
+        title: Text('Create Contact'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -105,54 +104,65 @@ class _CreateContactPageState extends State<CreateContactPage> {
           key: _formKey,
           child: ListView(
             children: [
-              TextFormField(
+              _buildTextField(
                 controller: _nameController,
-                decoration: InputDecoration(labelText: 'Name'),
+                label: 'Name',
                 validator: (value) => value!.isEmpty ? 'Enter name' : null,
               ),
-              TextFormField(
+              _buildTextField(
                 controller: _nicknameController,
-                decoration: InputDecoration(labelText: 'Nickname'),
+                label: 'Nickname',
               ),
-              TextFormField(
+              _buildTextField(
                 controller: _phone1Controller,
-                decoration: InputDecoration(labelText: 'Phone Number 1'),
+                label: 'Phone Number 1',
                 keyboardType: TextInputType.phone,
                 validator: (value) =>
                     value!.isEmpty ? 'Enter phone number' : null,
               ),
-              TextFormField(
+              _buildTextField(
                 controller: _phone2Controller,
-                decoration: InputDecoration(labelText: 'Phone Number 2'),
+                label: 'Phone Number 2',
                 keyboardType: TextInputType.phone,
               ),
-              TextFormField(
+              _buildTextField(
                 controller: _organizationController,
-                decoration: InputDecoration(labelText: 'Organization'),
+                label: 'Organization',
               ),
               SizedBox(height: 20),
-              Text('Additional Information'),
+              Text(
+                'Additional Information',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+              ),
               ..._additionalFields.map((field) {
                 return Row(
                   children: [
                     Expanded(
-                      child: TextFormField(
-                        controller: field['key'],
-                        decoration: InputDecoration(labelText: 'Field Name'),
+                      child: _buildTextField(
+                        controller: field['key']!,
+                        label: 'Field Name',
                       ),
                     ),
                     SizedBox(width: 10),
                     Expanded(
-                      child: TextFormField(
-                        controller: field['value'],
-                        decoration: InputDecoration(labelText: 'Field Value'),
+                      child: _buildTextField(
+                        controller: field['value']!,
+                        label: 'Field Value',
                       ),
                     ),
                   ],
                 );
               }).toList(),
-              TextButton(
+              TextButton.icon(
                 onPressed: _addAdditionalField,
+                icon: Icon(Icons.add, color: Colors.blueAccent),
+                label: Text(
+                  'Add More Fields',
+                  style: TextStyle(color: Colors.blueAccent),
+                ),
                 style: TextButton.styleFrom(
                     foregroundColor: const Color.fromARGB(255, 247, 248, 248),
                     backgroundColor: Colors.blue
@@ -163,16 +173,41 @@ class _CreateContactPageState extends State<CreateContactPage> {
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _saveContact,
-                style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: Colors.blue),
-                child: Text(widget.existingContact == null
-                    ? 'Save Contact'
-                    : 'Update Contact'),
+                child: Text('Save Contact'),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // Helper method to create styled text fields
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    String? Function(String?)? validator,
+    TextInputType? keyboardType,
+  }) {
+    return Card(
+      elevation: 2,
+      margin: EdgeInsets.symmetric(vertical: 8.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.0),
+            borderSide: BorderSide(color: Colors.blueAccent, width: 1.5),
+          ),
+          contentPadding:
+              EdgeInsets.symmetric(vertical: 15.0, horizontal: 10.0),
+        ),
+        validator: validator,
+        keyboardType: keyboardType,
       ),
     );
   }

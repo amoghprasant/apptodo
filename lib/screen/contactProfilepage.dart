@@ -17,38 +17,6 @@ class ContactProfilePage extends StatelessWidget {
       appBar: AppBar(
         title: Text(contact.name),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.delete),
-            onPressed: () async {
-              // Confirm deletion
-              final confirmDelete = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: Text('Delete Contact'),
-                  content:
-                      Text('Are you sure you want to delete this contact?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      child: Text('Delete'),
-                    ),
-                  ],
-                ),
-              );
-
-              if (confirmDelete == true) {
-                await contactRepository.delete(contact.id!);
-                Navigator.of(context)
-                    .pop(true); // Indicate that a contact was deleted
-              }
-            },
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -123,6 +91,13 @@ class ContactProfilePage extends StatelessWidget {
                   foregroundColor: Colors.white, backgroundColor: Colors.blue),
               child: Text('Edit Contact'),
             ),
+            ...contact.additionalInfo?.entries.map((entry) {
+                  return ListTile(
+                    title: Text(entry.key),
+                    subtitle: Text(entry.value),
+                  );
+                }).toList() ??
+                [],
           ],
         ),
       ),
@@ -148,5 +123,32 @@ class ContactProfilePage extends StatelessWidget {
       contentPadding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
       visualDensity: VisualDensity.adaptivePlatformDensity,
     );
+  }
+
+  Widget _buildContactInfoCard(
+      {required IconData icon, required String label, required String value}) {
+    return Card(
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(label),
+        subtitle: Text(value),
+      ),
+    );
+  }
+
+  IconData _getIconForKey(String key) {
+    // Map keys to specific icons
+    switch (key.toLowerCase()) {
+      case 'email':
+        return Icons.email;
+      case 'address':
+        return Icons.location_on;
+      case 'birthday':
+        return Icons.cake;
+      case 'notes':
+        return Icons.notes;
+      default:
+        return Icons.info; // Default icon for unspecified keys
+    }
   }
 }
