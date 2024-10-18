@@ -4,8 +4,12 @@ import 'package:sqliteproj/database/repository.dart';
 
 class CreateContactPage extends StatefulWidget {
   final ContactEntityRepository contactRepository;
+  final Contact? existingContact; // Nullable existing contact
 
-  CreateContactPage({required this.contactRepository});
+  CreateContactPage({
+    required this.contactRepository,
+    this.existingContact,
+  });
 
   @override
   _CreateContactPageState createState() => _CreateContactPageState();
@@ -13,13 +17,38 @@ class CreateContactPage extends StatefulWidget {
 
 class _CreateContactPageState extends State<CreateContactPage> {
   final _formKey = GlobalKey<FormState>();
-  TextEditingController _nameController = TextEditingController();
-  TextEditingController _nicknameController = TextEditingController();
-  TextEditingController _phone1Controller = TextEditingController();
-  TextEditingController _phone2Controller = TextEditingController();
-  TextEditingController _organizationController = TextEditingController();
+  late TextEditingController _nameController;
+  late TextEditingController _nicknameController;
+  late TextEditingController _phone1Controller;
+  late TextEditingController _phone2Controller;
+  late TextEditingController _organizationController;
 
   List<Map<String, TextEditingController>> _additionalFields = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize controllers with existing contact data if available
+    _nameController = TextEditingController(text: widget.existingContact?.name);
+    _nicknameController =
+        TextEditingController(text: widget.existingContact?.nickname);
+    _phone1Controller =
+        TextEditingController(text: widget.existingContact?.phone1);
+    _phone2Controller =
+        TextEditingController(text: widget.existingContact?.phone2);
+    _organizationController =
+        TextEditingController(text: widget.existingContact?.organization);
+
+    // Load additional fields if the existing contact has them
+    if (widget.existingContact != null) {
+      widget.existingContact!.additionalInfo.forEach((key, value) {
+        _additionalFields.add({
+          'key': TextEditingController(text: key),
+          'value': TextEditingController(text: value),
+        });
+      });
+    }
+  }
 
   void _addAdditionalField() {
     setState(() {
@@ -41,7 +70,9 @@ class _CreateContactPageState extends State<CreateContactPage> {
         }
       }
 
-      Contact newContact = Contact(
+      Contact contact = Contact(
+        id: widget
+            .existingContact?.id, // Keep the ID if editing an existing contact
         name: _nameController.text,
         nickname: _nicknameController.text,
         phone1: _phone1Controller.text,
@@ -50,8 +81,14 @@ class _CreateContactPageState extends State<CreateContactPage> {
         additionalInfo: additionalInfo,
       );
 
-      await widget.contactRepository.create(newContact);
-      Navigator.pop(context, newContact.toMap());
+      if (widget.existingContact == null) {
+        await widget.contactRepository.create(contact); // Create new contact
+      } else {
+        await widget.contactRepository
+            .update(contact); // Update existing contact
+      }
+
+      Navigator.pop(context, contact.toMap());
     }
   }
 
@@ -60,8 +97,6 @@ class _CreateContactPageState extends State<CreateContactPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Create Contact'),
-        backgroundColor: Colors.blueAccent,
-        centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -132,14 +167,7 @@ class _CreateContactPageState extends State<CreateContactPage> {
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _saveContact,
-                child: Text(
-                  'Save Contact',
-                  style: TextStyle(color: Colors.black), // Black text color
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
-                  padding: EdgeInsets.symmetric(vertical: 16.0),
-                ),
+                child: Text('Save Contact'),
               ),
             ],
           ),

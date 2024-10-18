@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:sqliteproj/model/contacts_model.dart';
 import 'package:sqliteproj/screen/contactProfilepage.dart';
 import 'package:sqliteproj/screen/createcontact.dart';
 import 'package:sqliteproj/database/repository.dart';
+import 'package:sqliteproj/providers/theme.dart'; // Import the ThemeProvider
 
 class ContactsHomePage extends StatefulWidget {
   final ContactEntityRepository contactRepository;
@@ -14,14 +16,15 @@ class ContactsHomePage extends StatefulWidget {
 }
 
 class _ContactsHomePageState extends State<ContactsHomePage> {
-  List<Contact> _contacts = []; // List to hold contact details
-  List<Contact> _filteredContacts = []; // List to hold filtered contact details
+  List<Contact> _contacts = [];
+  List<Contact> _filteredContacts = [];
   TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false; // State variable to track search mode
 
   @override
   void initState() {
     super.initState();
-    _loadContacts(); // Load contacts from the database
+    _loadContacts();
     _searchController.addListener(_filterContacts);
   }
 
@@ -34,12 +37,9 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
 
   void _filterContacts() {
     String searchText = _searchController.text.toLowerCase();
-
     setState(() {
-      // Filter contacts based on the search text
       if (searchText.isEmpty) {
-        _filteredContacts =
-            List.from(_contacts); // Show all contacts if search is empty
+        _filteredContacts = List.from(_contacts);
       } else {
         _filteredContacts = _contacts.where((contact) {
           return contact.name.toLowerCase().contains(searchText) ||
@@ -52,32 +52,56 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
   }
 
   Future<void> _loadContacts() async {
-    // Fetch contacts from the database
     List<Contact> contacts = await widget.contactRepository.getAll();
+    contacts
+        .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     setState(() {
       _contacts = contacts;
-      _filteredContacts = List.from(_contacts); // Initialize filtered contacts
+      _filteredContacts = List.from(_contacts);
     });
   }
 
   Future<void> _addContact(Contact newContact) async {
-    // Save the new contact to the database
     int id = await widget.contactRepository.create(newContact);
-    newContact.id = id; // Update the contact's ID with the generated ID
-
+    newContact.id = id;
     setState(() {
       _contacts.add(newContact);
-      _filteredContacts = List.from(_contacts); // Update filtered contacts
+      _filteredContacts = List.from(_contacts);
+    });
+  }
+
+  Future<void> _deleteContact(int contactId) async {
+    await widget.contactRepository.delete(contactId);
+    _loadContacts(); // Refresh the contact list after deletion
+  }
+
+  Future<void> _refreshContactList() async {
+    await _loadContacts(); // Reload contacts to refresh the list
+  }
+
+  void _startSearch() {
+    setState(() {
+      _isSearching = true; // Enable search mode
+    });
+  }
+
+  void _cancelSearch() {
+    setState(() {
+      _isSearching = false; // Disable search mode
+      _searchController.clear(); // Clear the search text
+      _filteredContacts = List.from(_contacts); // Show all contacts again
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider =
+        Provider.of<ThemeProvider>(context); // Access ThemeProvider
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(''),
+        title: Text('Contacts'),
         centerTitle: true,
-        backgroundColor: Colors.blueAccent, // Consistent app bar color
       ),
       body: Column(
         children: [
@@ -86,15 +110,11 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                filled: true,
-                fillColor:
-                    Colors.grey[200], // Light background for search field
                 labelText: 'Search Contacts',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.0),
-                  borderSide: BorderSide.none,
                 ),
-                prefixIcon: Icon(Icons.search, color: Colors.blueAccent),
+                prefixIcon: Icon(Icons.search),
               ),
             ),
           ),
@@ -117,7 +137,6 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          // Navigate to the CreateContactPage and pass the contactRepository
           final newContactMap = await Navigator.push(
             context,
             MaterialPageRoute(
@@ -127,7 +146,6 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
             ),
           );
 
-          // Check if new contact is not null and add it to the list
           if (newContactMap != null) {
             Contact newContact = Contact.fromMap(newContactMap);
             await _addContact(newContact);
@@ -139,13 +157,12 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
     );
   }
 
-  // Helper method to build a styled card for each contact
   Widget _buildContactCard(Contact contact) {
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.0),
       ),
-      elevation: 2,
+      elevation: 4,
       margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
       child: ListTile(
         leading: CircleAvatar(
@@ -159,16 +176,9 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
         ),
         title: Text(
           contact.name,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.black87, // Darker text color for better readability
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        subtitle: Text(
-          contact.phone1,
-          style: TextStyle(
-              color: Colors.black54), // Lighter text color for subtitled
-        ),
+        subtitle: Text(contact.phone1),
         onTap: () {
           // Navigate to the ContactProfilePage with the selected contact
           Navigator.push(

@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:sqliteproj/model/contacts_model.dart';
+import 'package:sqliteproj/database/repository.dart';
+import 'package:sqliteproj/screen/createcontact.dart';
 
 class ContactProfilePage extends StatelessWidget {
   final Contact contact;
+  final ContactEntityRepository contactRepository;
 
-  ContactProfilePage({required this.contact});
+  const ContactProfilePage(
+      {Key? key, required this.contact, required this.contactRepository})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -12,38 +17,33 @@ class ContactProfilePage extends StatelessWidget {
       appBar: AppBar(
         title: Text(contact.name),
         centerTitle: true,
-        backgroundColor: Colors.blueAccent, // Consistent color theme
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildContactInfoCard(
+            _buildContactInfoTile(
               icon: Icons.person,
               label: 'Name',
               value: contact.name,
             ),
-            SizedBox(height: 10),
-            _buildContactInfoCard(
+            _buildContactInfoTile(
               icon: Icons.alternate_email,
               label: 'Nickname',
               value: contact.nickname.isNotEmpty ? contact.nickname : 'N/A',
             ),
-            SizedBox(height: 10),
-            _buildContactInfoCard(
+            _buildContactInfoTile(
               icon: Icons.phone,
               label: 'Phone Number 1',
               value: contact.phone1.isNotEmpty ? contact.phone1 : 'N/A',
             ),
-            SizedBox(height: 10),
-            _buildContactInfoCard(
+            _buildContactInfoTile(
               icon: Icons.phone_android,
               label: 'Phone Number 2',
               value: contact.phone2.isNotEmpty ? contact.phone2 : 'N/A',
             ),
-            SizedBox(height: 10),
-            _buildContactInfoCard(
+            _buildContactInfoTile(
               icon: Icons.business,
               label: 'Organization',
               value: contact.organization.isNotEmpty
@@ -59,17 +59,9 @@ class ContactProfilePage extends StatelessWidget {
                   ),
             ),
             ...contact.additionalInfo?.entries.map((entry) {
-                  // Define a specific icon for each entry based on its key
-                  IconData icon = _getIconForKey(entry.key);
-
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 5),
-                    child: ListTile(
-                      leading: Icon(icon,
-                          color: Colors.blueAccent), // Icon for additional info
-                      title: Text(entry.key),
-                      subtitle: Text(entry.value),
-                    ),
+                  return ListTile(
+                    title: Text(entry.key),
+                    subtitle: Text(entry.value),
                   );
                 }).toList() ??
                 [],
@@ -82,14 +74,9 @@ class ContactProfilePage extends StatelessWidget {
   Widget _buildContactInfoCard(
       {required IconData icon, required String label, required String value}) {
     return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.0),
-      ),
-      elevation: 2,
       child: ListTile(
-        leading: Icon(icon, color: Colors.blueAccent), // Consistent icon color
-        title: Text(label,
-            style: TextStyle(fontWeight: FontWeight.bold)), // Bold label
+        leading: Icon(icon),
+        title: Text(label),
         subtitle: Text(value),
       ),
     );
