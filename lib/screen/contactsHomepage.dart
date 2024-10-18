@@ -108,7 +108,8 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
                   hintText: 'Search Contacts',
                   border: InputBorder.none,
                 ),
-                style: TextStyle(color: Colors.black),
+                style:
+                    TextStyle(color: const Color.fromARGB(255, 243, 242, 242)),
               )
             : Text('Contacts'),
         centerTitle: true,
@@ -173,6 +174,7 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
             await _addContact(newContact);
           }
         },
+        backgroundColor: const Color.fromARGB(255, 3, 138, 249),
         child: Icon(Icons.add),
       ),
     );

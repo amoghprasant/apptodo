@@ -153,11 +153,19 @@ class _CreateContactPageState extends State<CreateContactPage> {
               }).toList(),
               TextButton(
                 onPressed: _addAdditionalField,
+                style: TextButton.styleFrom(
+                    foregroundColor: const Color.fromARGB(255, 247, 248, 248),
+                    backgroundColor: Colors.blue
+                    // Text color
+                    ),
                 child: Text('Add More Fields'),
               ),
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _saveContact,
+                style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Colors.blue),
                 child: Text(widget.existingContact == null
                     ? 'Save Contact'
                     : 'Update Contact'),

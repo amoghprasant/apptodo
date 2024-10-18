@@ -59,21 +59,25 @@ class ContactProfilePage extends StatelessWidget {
               icon: Icons.person,
               label: 'Name',
               value: contact.name,
+              context: context,
             ),
             _buildContactInfoTile(
               icon: Icons.alternate_email,
               label: 'Nickname',
               value: contact.nickname.isNotEmpty ? contact.nickname : 'N/A',
+              context: context,
             ),
             _buildContactInfoTile(
               icon: Icons.phone,
               label: 'Phone Number 1',
               value: contact.phone1.isNotEmpty ? contact.phone1 : 'N/A',
+              context: context,
             ),
             _buildContactInfoTile(
               icon: Icons.phone_android,
               label: 'Phone Number 2',
               value: contact.phone2.isNotEmpty ? contact.phone2 : 'N/A',
+              context: context,
             ),
             _buildContactInfoTile(
               icon: Icons.business,
@@ -81,6 +85,7 @@ class ContactProfilePage extends StatelessWidget {
               value: contact.organization.isNotEmpty
                   ? contact.organization
                   : 'N/A',
+              context: context,
             ),
             SizedBox(height: 20),
             Text(
@@ -92,6 +97,7 @@ class ContactProfilePage extends StatelessWidget {
                 icon: Icons.info,
                 label: entry.key,
                 value: entry.value,
+                context: context,
               );
             }).toList(),
             SizedBox(height: 20),
@@ -113,6 +119,8 @@ class ContactProfilePage extends StatelessWidget {
                       .pop(updatedContactMap); // Return the updated contact
                 }
               },
+              style: ElevatedButton.styleFrom(
+                  foregroundColor: Colors.white, backgroundColor: Colors.blue),
               child: Text('Edit Contact'),
             ),
           ],
@@ -125,12 +133,17 @@ class ContactProfilePage extends StatelessWidget {
     required IconData icon,
     required String label,
     required String value,
+    required BuildContext context,
   }) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return ListTile(
       leading: Icon(icon),
       title: Text(label, style: TextStyle(fontWeight: FontWeight.bold)),
       subtitle: Text(value),
-      tileColor: Colors.grey[200],
+      tileColor: isDarkMode
+          ? Colors.grey[800] // Darker background for dark mode
+          : Colors.grey[200], // Lighter background for light mode
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       contentPadding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
       visualDensity: VisualDensity.adaptivePlatformDensity,
