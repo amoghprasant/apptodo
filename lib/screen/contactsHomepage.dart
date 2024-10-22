@@ -5,6 +5,7 @@ import 'package:sqliteproj/screen/contactProfilepage.dart';
 import 'package:sqliteproj/screen/createcontact.dart';
 import 'package:sqliteproj/database/repository.dart';
 import 'package:sqliteproj/providers/theme.dart'; // Import the ThemeProvider
+import 'package:url_launcher/url_launcher.dart'; // Import url_launcher
 
 class ContactsHomePage extends StatefulWidget {
   final ContactEntityRepository contactRepository;
@@ -57,17 +58,24 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
         .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     setState(() {
       _contacts = contacts;
-      _filteredContacts = List.from(_contacts);
+      _filteredContacts =
+          List.from(_contacts); // Ensure _filteredContacts is also updated
     });
   }
 
   Future<void> _addContact(Contact newContact) async {
+    // Check if contact already exists (based on a unique identifier)
+    if (_contacts.any(
+        (c) => c.phone1 == newContact.phone1 || c.name == newContact.name)) {
+      // You can show a message here if you want to notify the user about duplicates
+      return; // Do not add the contact if it already exists
+    }
+
     int id = await widget.contactRepository.create(newContact);
     newContact.id = id;
-    setState(() {
-      _contacts.add(newContact);
-      _filteredContacts = List.from(_contacts);
-    });
+
+    // Reload contacts to avoid duplication
+    await _loadContacts(); // Reload contacts to avoid duplicates
   }
 
   Future<void> _deleteContact(int contactId) async {
@@ -185,14 +193,14 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
       key: ValueKey(contact.id),
       background: Container(
         color: Colors.red,
-        alignment: Alignment.centerLeft,
+        alignment: Alignment.centerRight, // Align to the right for left swipe
         padding: EdgeInsets.symmetric(horizontal: 20.0),
         child: Icon(
           Icons.delete,
           color: Colors.white,
         ),
       ),
-      direction: DismissDirection.startToEnd,
+      direction: DismissDirection.endToStart, // Allow left swipe for deletion
       confirmDismiss: (direction) async {
         // Show a confirmation dialog before deleting
         final confirmDelete = await showDialog<bool>(
@@ -241,32 +249,61 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
           ),
           subtitle: Text(contact.phone1),
           onTap: () async {
-            // Navigate to the ContactProfilePage with the selected contact
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ContactProfilePage(
-                  contact: contact,
-                  contactRepository: widget.contactRepository,
-                ),
-              ),
-            );
-
-            if (result == true) {
-              await _refreshContactList(); // Refresh the contact list if deleted
-            } else if (result != null) {
-              // If the contact was edited, update the contact in the list
-              setState(() {
-                int index = _contacts.indexWhere((c) => c.id == result['id']);
-                if (index != -1) {
-                  _contacts[index] = Contact.fromMap(result);
-                  _filteredContacts = List.from(_contacts);
-                }
-              });
-            }
+            // Show dialog to select phone number for calling
+            _showPhoneNumberDialog(contact);
           },
         ),
       ),
     );
+  }
+
+  // Method to show a dialog with phone numbers for the selected contact
+  void _showPhoneNumberDialog(Contact contact) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Select Phone Number'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (contact.phone1.isNotEmpty)
+                ListTile(
+                  title: Text(contact.phone1),
+                  onTap: () {
+                    Navigator.of(context).pop(); // Close the dialog
+                    _confirmAndCall(contact.phone1); // Initiate the call
+                  },
+                ),
+              if (contact.phone2.isNotEmpty)
+                ListTile(
+                  title: Text(contact.phone2),
+                  onTap: () {
+                    Navigator.of(context).pop(); // Close the dialog
+                    _confirmAndCall(contact.phone2); // Initiate the call
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Method to confirm and initiate a call
+  Future<void> _confirmAndCall(String phoneNumber) async {
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+
+    if (await canLaunch(launchUri.toString())) {
+      await launch(launchUri.toString());
+    } else {
+      // Handle the error if the device cannot make a call
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not launch the dialer.')),
+      );
+    }
   }
 }

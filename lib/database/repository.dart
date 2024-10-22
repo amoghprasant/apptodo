@@ -118,6 +118,19 @@ class ContactEntityRepository extends EntityRepository<Contact> {
     return records.isNotEmpty;
   }
 
+  @override
+  Future<int> create(Contact entity) async {
+    // Check if the phone number already exists before inserting
+    bool exists = await isPhoneNumberExists(entity.phone1);
+
+    if (exists) {
+      // If it exists, throw an error or handle as needed
+      throw Exception('Contact with this phone number already exists');
+    }
+
+    return await database.insert(tableName, toMap(entity));
+  }
+
   /// Method for searching Contacts by keyword (name, phone, or additionalInfo)
   Future<List<Contact>> quickSearchWithFallback(String keyword) async {
     // Search in specified fields first
@@ -161,6 +174,8 @@ class ContactEntityRepository extends EntityRepository<Contact> {
   }
 
   final Set<String> _searchableFields = {'name', 'phone1', 'phone2'};
+
+  getAllContacts() {}
 }
 
 // Todo Entity Repository Implementation
