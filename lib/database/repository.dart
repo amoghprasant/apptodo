@@ -1,29 +1,18 @@
-import 'dart:convert'; // Import for JSON encoding and decoding
+import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
-import 'package:sqliteproj/model/contacts_model.dart';
-import 'package:sqliteproj/model/todo_model.dart';
+import 'package:contacts_service/contacts_service.dart' as DeviceContact;
+import 'package:sqliteproj/model/contacts_model.dart'; // Ensure this path is correct
+import 'package:sqliteproj/model/todo_model.dart'; // Ensure this path is correct
 
 // Abstract Repository Interface
 abstract class Repository<T extends BaseEntity, K> {
-  /// Get all
   Future<List<T>> getAll();
-
-  /// Get one record
   Future<T?> getById(K id);
-
-  /// Create a record
   Future<K> create(T entity);
-
-  /// Update a record
   Future<K> update(T entity);
-
-  /// Delete a record
   Future<bool> delete(K id);
-}
 
-// Base entity class
-abstract class BaseEntity {
-  int? get id; // Getter for id
+  syncContacts() {}
 }
 
 // Abstract Entity Repository Implementation
@@ -33,13 +22,8 @@ abstract class EntityRepository<K extends BaseEntity>
 
   EntityRepository({required this.database});
 
-  /// Get Name of table
   String get tableName;
-
-  /// Convert to Map
   Map<String, dynamic> toMap(K entity);
-
-  /// Deserialization
   K fromMap(Map<String, dynamic> map);
 
   @override
@@ -72,7 +56,7 @@ abstract class EntityRepository<K extends BaseEntity>
       tableName,
       toMap(entity),
       where: 'id = ?',
-      whereArgs: [entity.id], // Now this will work since entity has an id
+      whereArgs: [entity.id],
     );
   }
 }
@@ -92,7 +76,6 @@ class ContactEntityRepository extends EntityRepository<Contact> {
             decodedInfo.map((key, value) => MapEntry(key, value.toString()));
       }
     }
-
     return Contact.fromMap(map)..additionalInfo = additionalInfo;
   }
 
@@ -103,7 +86,6 @@ class ContactEntityRepository extends EntityRepository<Contact> {
   Map<String, dynamic> toMap(Contact entity) {
     // Convert the dynamic fields to a JSON string
     final additionalInfoJson = jsonEncode(entity.additionalInfo);
-
     final baseMap = entity.toMap();
     baseMap['additionalInfo'] = additionalInfoJson;
     return baseMap;
@@ -120,83 +102,102 @@ class ContactEntityRepository extends EntityRepository<Contact> {
 
   @override
   Future<int> create(Contact entity) async {
-    // Check if the phone number already exists before inserting
     bool exists = await isPhoneNumberExists(entity.phone1);
-
     if (exists) {
-      // If it exists, throw an error or handle as needed
-      throw Exception('Contact with this phone number already exists');
+      return -1; // Indicate that the contact already exists
     }
-
     return await database.insert(tableName, toMap(entity));
   }
 
-  /// Method for searching Contacts by keyword (name, phone, or additionalInfo)
+  // Method for two-way sync
+  Future<void> syncContacts() async {
+    List<DeviceContact.Contact> deviceContacts =
+        await DeviceContact.ContactsService.getContacts();
+    List<Contact> localContacts = await getAll();
+
+    // Sync from address book to local DB
+    for (var deviceContact in deviceContacts) {
+      var localContact = localContacts.firstWhere(
+        (contact) => contact.identifier == deviceContact.identifier,
+        orElse: () => Contact(
+            identifier: '',
+            name: '',
+            phone1: '',
+            additionalInfo: {},
+            phone2: '',
+            organization: '',
+            nickname: ''),
+      );
+
+      if (localContact.identifier!.isEmpty) {
+        await create(Contact.fromDeviceContact(deviceContact));
+      }
+    }
+
+    // Sync from local DB to address book
+    for (var localContact in localContacts) {
+      var deviceContact = deviceContacts.firstWhere(
+        (contact) => contact.identifier == localContact.identifier,
+        orElse: () => DeviceContact.Contact(),
+      );
+
+      if (deviceContact.identifier == null ||
+          deviceContact.identifier!.isEmpty) {
+        await DeviceContact.ContactsService.addContact(
+            localContact.toDeviceContact());
+      }
+    }
+  }
+
+  // Method for searching Contacts by keyword (name, phone, or additionalInfo)
   Future<List<Contact>> quickSearchWithFallback(String keyword) async {
-    // Search in specified fields first
     final queryFields =
         _searchableFields.map((field) => '$field LIKE ?').toList();
     final whereArgs = List.filled(_searchableFields.length, '%$keyword%');
     final query = queryFields.join(' OR ');
 
-    // Perform the initial query to get matching records from specified fields
     final List<Map<String, dynamic>> records = await database.query(
       tableName,
       where: query,
       whereArgs: whereArgs,
     );
 
-    // Convert the initial query results into a list of Contacts
     List<Contact> contacts = records.map((record) => fromMap(record)).toList();
 
-    // If no results are found, search in additionalInfo
     if (contacts.isEmpty) {
       final List<Map<String, dynamic>> allRecords =
           await database.query(tableName);
       contacts = allRecords
           .map((record) {
             final contact = fromMap(record);
-
-            // Check if the keyword exists in the additionalInfo map values
             final additionalInfo = contact.additionalInfo;
             final isKeywordInAdditionalInfo = additionalInfo.values.any(
               (value) => value.toLowerCase().contains(keyword.toLowerCase()),
             );
-
-            // Return the contact if the keyword is found in additionalInfo
             return isKeywordInAdditionalInfo ? contact : null;
           })
-          .whereType<Contact>()
-          .toList(); // Filter out nulls
+          .where((contact) => contact != null) // Filter out null values
+          .cast<Contact>() // Cast to List<Contact>
+          .toList();
     }
 
     return contacts;
   }
 
   final Set<String> _searchableFields = {'name', 'phone1', 'phone2'};
-
-  getAllContacts() {}
 }
 
-// Todo Entity Repository Implementation
-class TodoEntityRepository extends EntityRepository<Todo> {
-  TodoEntityRepository({required super.database});
 
-  @override
-  Todo fromMap(Map<String, dynamic> map) => Todo.fromMap(map);
+// // Todo Entity Repository Implementation
+// class TodoEntityRepository extends EntityRepository<Todo> {
+//   TodoEntityRepository({required super.database});
 
-  @override
-  String get tableName => 'todo';
+//   @override
+//   Todo fromMap(Map<String, dynamic> map) => Todo.fromMap(map);
 
-  @override
-  Map<String, dynamic> toMap(Todo entity) => entity.toMap();
+//   @override
+//   String get tableName => 'todo';
 
-  /// Method for searching Todos by keyword (name or description)
-  Future<List<Todo>> quickSearch(String keyword) async {
-    final query = "name LIKE ? OR description LIKE ?";
-    final List<Map<String, dynamic>> records = await database
-        .query(tableName, where: query, whereArgs: ['$keyword%', '%$keyword%']);
-    final List<Todo> todos = records.map((record) => fromMap(record)).toList();
-    return todos;
-  }
-}
+//   @override
+//   Map<String, dynamic> toMap(Todo entity) => entity.toMap();
+// }

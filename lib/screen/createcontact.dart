@@ -79,6 +79,7 @@ class _CreateContactPageState extends State<CreateContactPage> {
         phone2: _phone2Controller.text,
         organization: _organizationController.text,
         additionalInfo: additionalInfo,
+        identifier: null,
       );
 
       if (widget.existingContact == null) {
@@ -98,7 +99,8 @@ class _CreateContactPageState extends State<CreateContactPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Create Contact'),
+        title: Text(
+            widget.existingContact == null ? 'Create Contact' : 'Edit Contact'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

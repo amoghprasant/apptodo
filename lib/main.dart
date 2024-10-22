@@ -1,18 +1,44 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:sqliteproj/screen/contactsHomepage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:sqliteproj/database/repository.dart';
 import 'package:sqliteproj/providers/theme.dart';
-import 'package:sqliteproj/screen/contactsHomepage.dart';
+import 'package:workmanager/workmanager.dart';
+
+// Global variable for the contact repository
+late ContactEntityRepository contactRepository;
+
+// Callback dispatcher for Workmanager
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    await contactRepository
+        .syncContacts(); // Use the global repository instance
+    return Future.value(true);
+  });
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Open the database
   final Database database = await initializeDatabase();
-  final contactRepository = ContactEntityRepository(database: database);
+  contactRepository =
+      ContactEntityRepository(database: database); // Set the global variable
+
+  // Request permission to access contacts
+  var status = await Permission.contacts.request();
+
+  if (status.isGranted) {
+    // Initialize Workmanager for periodic tasks
+    Workmanager().initialize(callbackDispatcher);
+    Workmanager().registerPeriodicTask("syncContacts", "syncTask",
+        frequency: Duration(hours: 1));
+  }
 
   runApp(
     ChangeNotifierProvider(
@@ -28,12 +54,13 @@ Future<Database> initializeDatabase() async {
 
   return await openDatabase(
     path,
-    version: 2, // Increment the version number
+    version: 3, // Increment the version number
     onCreate: (db, version) {
       return db.execute(
         '''
         CREATE TABLE contact(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          identifier TEXT,  
           name TEXT,
           phone1 TEXT,
           phone2 TEXT,
@@ -47,6 +74,10 @@ Future<Database> initializeDatabase() async {
     onUpgrade: (db, oldVersion, newVersion) async {
       if (oldVersion < 2) {
         await db.execute('ALTER TABLE contact ADD COLUMN additionalInfo TEXT');
+      }
+      if (oldVersion < 3) {
+        await db.execute(
+            'ALTER TABLE contact ADD COLUMN identifier TEXT'); // Add identifier column
       }
     },
   );

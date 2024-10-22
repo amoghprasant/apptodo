@@ -49,6 +49,7 @@ class _EditContactPageState extends State<EditContactPage> {
       nickname: nicknameController.text,
       organization: organizationController.text,
       additionalInfo: widget.contact.additionalInfo,
+      identifier: null,
     );
 
     await widget.contactRepository.update(updatedContact);

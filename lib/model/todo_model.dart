@@ -1,4 +1,5 @@
 import 'package:sqliteproj/database/repository.dart';
+import 'package:sqliteproj/model/contacts_model.dart';
 
 class Todo extends BaseEntity {
   @override

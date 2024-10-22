@@ -7,9 +7,11 @@ class ContactProfilePage extends StatelessWidget {
   final Contact contact;
   final ContactEntityRepository contactRepository;
 
-  const ContactProfilePage(
-      {Key? key, required this.contact, required this.contactRepository})
-      : super(key: key);
+  const ContactProfilePage({
+    Key? key,
+    required this.contact,
+    required this.contactRepository,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -91,9 +93,52 @@ class ContactProfilePage extends StatelessWidget {
                   foregroundColor: Colors.white, backgroundColor: Colors.blue),
               child: Text('Edit Contact'),
             ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => _confirmDeleteContact(context),
+              style: ElevatedButton.styleFrom(
+                  foregroundColor: Colors.white, backgroundColor: Colors.red),
+              child: Text('Delete Contact'),
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  void _confirmDeleteContact(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Delete Contact'),
+          content: Text('Are you sure you want to delete this contact?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (contact.id != null) {
+                  // Check if id is not null
+                  await contactRepository
+                      .delete(contact.id!); // Use null check operator
+                  Navigator.of(context).pop(); // Close the dialog
+                  Navigator.of(context).pop(); // Go back to contacts homepage
+                } else {
+                  // Handle the case where id is null, if necessary
+                  Navigator.of(context).pop(); // Close the dialog
+                  // Show a message or handle the error as needed
+                }
+              },
+              child: Text('Delete'),
+            ),
+          ],
+        );
+      },
     );
   }
 

@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sqliteproj/model/contacts_model.dart';
-import 'package:sqliteproj/screen/contactProfilepage.dart';
+import 'package:sqliteproj/screen/contactProfilepage.dart'; // Adjust the import path if necessary
 import 'package:sqliteproj/screen/createcontact.dart';
 import 'package:sqliteproj/database/repository.dart';
-import 'package:sqliteproj/providers/theme.dart'; // Import the ThemeProvider
-import 'package:url_launcher/url_launcher.dart'; // Import url_launcher
+import 'package:sqliteproj/providers/theme.dart';
+import 'package:contacts_service/contacts_service.dart'
+    as DeviceContact; // Import for syncing contacts
+import 'dart:convert';
 
 class ContactsHomePage extends StatefulWidget {
   final ContactEntityRepository contactRepository;
 
+  // Constructor with required contactRepository parameter
   ContactsHomePage({required this.contactRepository});
 
   @override
@@ -20,7 +23,7 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
   List<Contact> _contacts = [];
   List<Contact> _filteredContacts = [];
   TextEditingController _searchController = TextEditingController();
-  bool _isSearching = false; // State variable to track search mode
+  bool _isSearching = false;
 
   @override
   void initState() {
@@ -53,38 +56,75 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
   }
 
   Future<void> _loadContacts() async {
+    await _syncContacts(); // Synchronize contacts before loading
     List<Contact> contacts = await widget.contactRepository.getAll();
     contacts
         .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     setState(() {
       _contacts = contacts;
-      _filteredContacts =
-          List.from(_contacts); // Ensure _filteredContacts is also updated
+      _filteredContacts = List.from(_contacts);
     });
   }
 
-  Future<void> _addContact(Contact newContact) async {
-    // Check if contact already exists (based on a unique identifier)
-    if (_contacts.any(
-        (c) => c.phone1 == newContact.phone1 || c.name == newContact.name)) {
-      // You can show a message here if you want to notify the user about duplicates
-      return; // Do not add the contact if it already exists
+  Future<void> _syncContacts() async {
+    List<DeviceContact.Contact> deviceContacts =
+        await DeviceContact.ContactsService.getContacts();
+    print('Device Contacts: ${deviceContacts.length}'); // Debug log
+
+    // Get local contacts from the database
+    List<Contact> localContacts = await widget.contactRepository.getAll();
+
+    // Sync from address book to local DB
+    for (var deviceContact in deviceContacts) {
+      var localContact = localContacts.firstWhere(
+        (contact) => contact.identifier == deviceContact.identifier,
+        orElse: () => Contact(
+          identifier: '',
+          name: deviceContact.displayName ?? '',
+          phone1: deviceContact.phones?.isNotEmpty == true
+              ? deviceContact.phones!.first.value!
+              : '',
+          additionalInfo: {},
+          phone2: '',
+          organization: deviceContact.company ?? '', nickname: '',
+          // nickname: deviceContact.nickname ?? '',
+        ),
+      );
+
+      if (localContact.identifier!.isEmpty) {
+        await widget.contactRepository
+            .create(Contact.fromDeviceContact(deviceContact));
+      }
     }
 
+    // Sync from local DB to address book
+    for (var localContact in localContacts) {
+      var deviceContact = deviceContacts.firstWhere(
+        (contact) => contact.identifier == localContact.identifier,
+        orElse: () => DeviceContact.Contact(),
+      );
+
+      if (deviceContact.identifier == null ||
+          deviceContact.identifier!.isEmpty) {
+        await DeviceContact.ContactsService.addContact(
+            localContact.toDeviceContact());
+      }
+    }
+  }
+
+  Future<void> _addContact(Contact newContact) async {
+    if (_contacts.any(
+        (c) => c.phone1 == newContact.phone1 || c.name == newContact.name)) {
+      return; // Do not add the contact if it already exists
+    }
     int id = await widget.contactRepository.create(newContact);
     newContact.id = id;
-
-    // Reload contacts to avoid duplication
-    await _loadContacts(); // Reload contacts to avoid duplicates
+    await _loadContacts(); // Reload contacts
   }
 
   Future<void> _deleteContact(int contactId) async {
     await widget.contactRepository.delete(contactId);
     _loadContacts(); // Refresh the contact list after deletion
-  }
-
-  Future<void> _refreshContactList() async {
-    await _loadContacts(); // Reload contacts to refresh the list
   }
 
   void _startSearch() {
@@ -103,8 +143,7 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider =
-        Provider.of<ThemeProvider>(context); // Access ThemeProvider
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -129,7 +168,6 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
                   : Icons.nightlight_round,
             ),
             onPressed: () {
-              // Toggle the theme
               themeProvider.toggleTheme(
                   themeProvider.themeMode == ThemeMode.dark
                       ? ThemeMode.light
@@ -139,11 +177,11 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
           _isSearching
               ? IconButton(
                   icon: Icon(Icons.cancel),
-                  onPressed: _cancelSearch, // Cancel search
+                  onPressed: _cancelSearch,
                 )
               : IconButton(
                   icon: Icon(Icons.search),
-                  onPressed: _startSearch, // Start search
+                  onPressed: _startSearch,
                 ),
         ],
       ),
@@ -172,8 +210,7 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
             context,
             MaterialPageRoute(
               builder: (context) => CreateContactPage(
-                contactRepository: widget.contactRepository,
-              ),
+                  contactRepository: widget.contactRepository),
             ),
           );
 
@@ -189,43 +226,17 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
   }
 
   Widget _buildContactCard(Contact contact) {
-    return Dismissible(
-      key: ValueKey(contact.id),
-      background: Container(
-        color: Colors.red,
-        alignment: Alignment.centerRight, // Align to the right for left swipe
-        padding: EdgeInsets.symmetric(horizontal: 20.0),
-        child: Icon(
-          Icons.delete,
-          color: Colors.white,
-        ),
-      ),
-      direction: DismissDirection.endToStart, // Allow left swipe for deletion
-      confirmDismiss: (direction) async {
-        // Show a confirmation dialog before deleting
-        final confirmDelete = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text('Delete Contact'),
-            content: Text('Are you sure you want to delete this contact?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text('Delete'),
-              ),
-            ],
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ContactProfilePage(
+                contact: contact,
+                contactRepository:
+                    widget.contactRepository), // Navigate to Profile Page
           ),
         );
-
-        if (confirmDelete == true) {
-          await _deleteContact(contact.id!); // Delete the contact if confirmed
-          return true;
-        }
-        return false;
       },
       child: Card(
         shape: RoundedRectangleBorder(
@@ -248,62 +259,36 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           subtitle: Text(contact.phone1),
-          onTap: () async {
-            // Show dialog to select phone number for calling
-            _showPhoneNumberDialog(contact);
-          },
+          trailing: IconButton(
+            icon: Icon(Icons.delete),
+            onPressed: () async {
+              // Confirm deletion before deleting
+              final confirmDelete = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: Text('Delete Contact'),
+                  content:
+                      Text('Are you sure you want to delete this contact?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: Text('Delete'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirmDelete == true) {
+                await _deleteContact(contact.id!);
+              }
+            },
+          ),
         ),
       ),
     );
-  }
-
-  // Method to show a dialog with phone numbers for the selected contact
-  void _showPhoneNumberDialog(Contact contact) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Select Phone Number'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (contact.phone1.isNotEmpty)
-                ListTile(
-                  title: Text(contact.phone1),
-                  onTap: () {
-                    Navigator.of(context).pop(); // Close the dialog
-                    _confirmAndCall(contact.phone1); // Initiate the call
-                  },
-                ),
-              if (contact.phone2.isNotEmpty)
-                ListTile(
-                  title: Text(contact.phone2),
-                  onTap: () {
-                    Navigator.of(context).pop(); // Close the dialog
-                    _confirmAndCall(contact.phone2); // Initiate the call
-                  },
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // Method to confirm and initiate a call
-  Future<void> _confirmAndCall(String phoneNumber) async {
-    final Uri launchUri = Uri(
-      scheme: 'tel',
-      path: phoneNumber,
-    );
-
-    if (await canLaunch(launchUri.toString())) {
-      await launch(launchUri.toString());
-    } else {
-      // Handle the error if the device cannot make a call
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not launch the dialer.')),
-      );
-    }
   }
 }
