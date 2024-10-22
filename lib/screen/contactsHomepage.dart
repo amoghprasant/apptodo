@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sqliteproj/model/contacts_model.dart';
-import 'package:sqliteproj/screen/contactProfilepage.dart';
+import 'package:sqliteproj/screen/contactProfilepage.dart'; // Import ContactProfilePage
 import 'package:sqliteproj/screen/createcontact.dart';
 import 'package:sqliteproj/database/repository.dart';
 import 'package:sqliteproj/providers/theme.dart'; // Import the ThemeProvider
@@ -64,17 +64,14 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
   }
 
   Future<void> _addContact(Contact newContact) async {
-    // Check if contact already exists (based on a unique identifier)
     if (_contacts.any(
         (c) => c.phone1 == newContact.phone1 || c.name == newContact.name)) {
-      // You can show a message here if you want to notify the user about duplicates
       return; // Do not add the contact if it already exists
     }
 
     int id = await widget.contactRepository.create(newContact);
     newContact.id = id;
 
-    // Reload contacts to avoid duplication
     await _loadContacts(); // Reload contacts to avoid duplicates
   }
 
@@ -129,7 +126,6 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
                   : Icons.nightlight_round,
             ),
             onPressed: () {
-              // Toggle the theme
               themeProvider.toggleTheme(
                   themeProvider.themeMode == ThemeMode.dark
                       ? ThemeMode.light
@@ -192,7 +188,16 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
     return Dismissible(
       key: ValueKey(contact.id),
       background: Container(
-        color: Colors.red,
+        color: Colors.green, // Green for right swipe action
+        alignment: Alignment.centerLeft, // Align to the left for right swipe
+        padding: EdgeInsets.symmetric(horizontal: 20.0),
+        child: Icon(
+          Icons.call,
+          color: Colors.white,
+        ),
+      ),
+      secondaryBackground: Container(
+        color: Colors.red, // Red for left swipe action
         alignment: Alignment.centerRight, // Align to the right for left swipe
         padding: EdgeInsets.symmetric(horizontal: 20.0),
         child: Icon(
@@ -200,30 +205,55 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
           color: Colors.white,
         ),
       ),
-      direction: DismissDirection.endToStart, // Allow left swipe for deletion
+      direction: DismissDirection.horizontal, // Allow both left and right swipe
       confirmDismiss: (direction) async {
-        // Show a confirmation dialog before deleting
-        final confirmDelete = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text('Delete Contact'),
-            content: Text('Are you sure you want to delete this contact?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text('Delete'),
-              ),
-            ],
-          ),
-        );
+        if (direction == DismissDirection.endToStart) {
+          // Handle left swipe (deletion)
+          final confirmDelete = await showDialog<bool>(
+              context: context,
+              builder: (context) {
+                // Get the current theme to check if it's dark mode
+                final isDarkMode =
+                    Theme.of(context).brightness == Brightness.dark;
+                return AlertDialog(
+                  title: Text('Delete Contact'),
+                  content:
+                      Text('Are you sure you want to delete this contact?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(
+                            color: isDarkMode
+                                ? Colors.white
+                                : Colors.black), // Set color based on theme
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: Text(
+                        'Delete',
+                        style: TextStyle(
+                            color: isDarkMode
+                                ? Colors.white
+                                : Colors.black), // Set color based on theme
+                      ),
+                    ),
+                  ],
+                );
+              });
 
-        if (confirmDelete == true) {
-          await _deleteContact(contact.id!); // Delete the contact if confirmed
-          return true;
+          if (confirmDelete == true) {
+            await _deleteContact(
+                contact.id!); // Delete the contact if confirmed
+            return true;
+          }
+          return false;
+        } else if (direction == DismissDirection.startToEnd) {
+          _showPhoneNumberDialog(
+              contact); // Show phone number dialog for calling
+          return false; // Do not dismiss the item when swiping right
         }
         return false;
       },
@@ -248,20 +278,29 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           subtitle: Text(contact.phone1),
-          onTap: () async {
-            // Show dialog to select phone number for calling
-            _showPhoneNumberDialog(contact);
+          onTap: () {
+            // Navigate to ContactProfilePage when the contact is tapped
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ContactProfilePage(
+                  contact: contact,
+                  contactRepository: widget.contactRepository,
+                ),
+              ),
+            );
           },
         ),
       ),
     );
   }
 
-  // Method to show a dialog with phone numbers for the selected contact
   void _showPhoneNumberDialog(Contact contact) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        // Get the current theme to check if it's dark mode
+        final isDarkMode = Theme.of(context).brightness == Brightness.dark;
         return AlertDialog(
           title: Text('Select Phone Number'),
           content: Column(
@@ -272,7 +311,7 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
                   title: Text(contact.phone1),
                   onTap: () {
                     Navigator.of(context).pop(); // Close the dialog
-                    _confirmAndCall(contact.phone1); // Initiate the call
+                    _directCall(contact.phone1); // Directly call the number
                   },
                 ),
               if (contact.phone2.isNotEmpty)
@@ -280,30 +319,43 @@ class _ContactsHomePageState extends State<ContactsHomePage> {
                   title: Text(contact.phone2),
                   onTap: () {
                     Navigator.of(context).pop(); // Close the dialog
-                    _confirmAndCall(contact.phone2); // Initiate the call
+                    _directCall(contact.phone2); // Directly call the number
                   },
                 ),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                    color: isDarkMode
+                        ? Colors.white
+                        : Colors.black), // Set color based on theme
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(
+                'Delete',
+                style: TextStyle(
+                    color: isDarkMode
+                        ? Colors.white
+                        : Colors.black), // Set color based on theme
+              ),
+            ),
+          ],
         );
       },
     );
   }
 
-  // Method to confirm and initiate a call
-  Future<void> _confirmAndCall(String phoneNumber) async {
+  void _directCall(String phoneNumber) async {
     final Uri launchUri = Uri(
       scheme: 'tel',
       path: phoneNumber,
     );
-
-    if (await canLaunch(launchUri.toString())) {
-      await launch(launchUri.toString());
-    } else {
-      // Handle the error if the device cannot make a call
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not launch the dialer.')),
-      );
-    }
+    await launchUrl(launchUri); // Make the call using url_launcher
   }
 }
